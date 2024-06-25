@@ -2,3 +2,5 @@
 node_modules/
 # Project exclude paths
 **/.umi*
+
+*.lock*
