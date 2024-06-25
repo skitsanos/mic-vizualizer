@@ -1,11 +1,12 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {VisualizationParams, VisualizationType} from '@/components/MicVisualizer/visualizers/core';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { VisualizationParams, VisualizationType } from '@/components/MicVisualizer/visualizers/core';
 import visualizationBars from '@/components/MicVisualizer/visualizers/visualizationBars';
 import visualizationWave from '@/components/MicVisualizer/visualizers/visualizationWave';
 import visualizationSpiral from '@/components/MicVisualizer/visualizers/visualizationSpiral';
 import visualizationParticles from '@/components/MicVisualizer/visualizers/visualizationParticles';
 import visualizationFrequencySpectrum from '@/components/MicVisualizer/visualizers/visualizationFrequencySpectrum';
 import visualizationCircularWaveform from '@/components/MicVisualizer/visualizers/visualizationCircularWaveform';
+import visualizationRadialGradientWave from '@/components/MicVisualizer/visualizers/visualizationRadialGradientWave';
 
 const visualizers = {
     bars: visualizationBars,
@@ -13,26 +14,23 @@ const visualizers = {
     spiral: visualizationSpiral,
     particles: visualizationParticles,
     frequencySpectrum: visualizationFrequencySpectrum,
-    circularWaveform: visualizationCircularWaveform
+    circularWaveform: visualizationCircularWaveform,
+    radialWave: visualizationRadialGradientWave
 };
 
-interface MicVisualizerProps
-{
+interface MicVisualizerProps {
     type?: VisualizationType;
 }
 
-const MicVisualizer: React.FC<MicVisualizerProps> = ({type = 'wave'}) =>
-{
+const MicVisualizer: React.FC<MicVisualizerProps> = ({ type = 'wave' }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
     const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
     const [isRecording, setIsRecording] = useState(false);
     const animationRef = useRef<number>();
 
-    const startVisualization = useCallback(async () =>
-    {
-        if (isRecording)
-        {
+    const startVisualization = useCallback(async () => {
+        if (isRecording) {
             stopVisualization();
             return;
         }
@@ -44,39 +42,29 @@ const MicVisualizer: React.FC<MicVisualizerProps> = ({type = 'wave'}) =>
         newAnalyser.fftSize = 1024;
         setAnalyser(newAnalyser);
 
-        try
-        {
-            const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const source = newAudioContext.createMediaStreamSource(stream);
             source.connect(newAnalyser);
+
             setIsRecording(true);
 
-            const canvas = canvasRef.current;
-            if (!canvas)
-            {
-                return;
-            }
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx)
-            {
-                return;
-            }
-
+            const dataArray = new Uint8Array(newAnalyser.frequencyBinCount);
             const bufferLength = newAnalyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
 
-            const draw = () =>
-            {
+            const draw = () => {
                 animationRef.current = requestAnimationFrame(draw);
-                newAnalyser.getByteTimeDomainData(dataArray);
+                newAnalyser.getByteFrequencyData(dataArray);
+
+                if (!canvasRef.current) return;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) return;
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Calculate volume
                 let sum = 0;
-                for (let i = 0; i < bufferLength; i++)
-                {
+                for (let i = 0; i < bufferLength; i++) {
                     sum += dataArray[i];
                 }
                 const average = sum / bufferLength;
@@ -95,37 +83,35 @@ const MicVisualizer: React.FC<MicVisualizerProps> = ({type = 'wave'}) =>
             };
 
             draw();
-        }
-        catch (error)
-        {
+        } catch (error) {
             console.error('Error accessing microphone:', error);
         }
     }, [isRecording, type]);
 
-    const stopVisualization = useCallback(() =>
-    {
-        if (!isRecording)
-        {
+    const stopVisualization = useCallback(() => {
+        if (!isRecording) {
             return;
         }
 
         setIsRecording(false);
-        if (animationRef.current)
-        {
+        if (animationRef.current) {
             cancelAnimationFrame(animationRef.current);
         }
-        if (audioContext)
-        {
-            audioContext.close();
+        if (audioContext) {
+            if (audioContext.state !== 'closed') {
+                audioContext.close().catch((error) => {
+                    console.error('Error closing AudioContext:', error);
+                });
+            }
             setAudioContext(null);
         }
-        setAnalyser(null);
-    }, [isRecording, audioContext]);
+        if (analyser) {
+            setAnalyser(null);
+        }
+    }, [isRecording, audioContext, analyser]);
 
-    useEffect(() =>
-    {
-        return () =>
-        {
+    useEffect(() => {
+        return () => {
             stopVisualization();
         };
     }, [stopVisualization]);

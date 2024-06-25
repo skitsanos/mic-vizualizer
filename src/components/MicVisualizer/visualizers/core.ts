@@ -9,4 +9,4 @@ export interface VisualizationParams
 
 export type VisualizerFunction = (params: VisualizationParams) => void;
 
-export type VisualizationType = 'bars' | 'wave' | 'spiral' | 'particles' | 'frequencySpectrum' | 'circularWaveform';
+export type VisualizationType = 'bars' | 'wave' | 'spiral' | 'particles' | 'frequencySpectrum' | 'circularWaveform' | 'radialWave';

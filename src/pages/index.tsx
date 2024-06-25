@@ -23,6 +23,7 @@ export default () =>
                 <option value="particles">Particles</option>
                 <option value="frequencySpectrum">Frequency Spectrum</option>
                 <option value="circularWaveform">Circular Waveform</option>
+                <option value="radialWave">Radial Gradient Wave</option>
             </select>
         </div>
     </div>;
