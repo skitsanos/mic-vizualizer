@@ -9,6 +9,6 @@
     "umi": "^4.2.13"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3"
+    "@types/react": "^19.0.0"
   }
 }
